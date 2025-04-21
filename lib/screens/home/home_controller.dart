@@ -71,9 +71,8 @@ bool isWithinRadius({
 
 @pragma('vm:entry-point')
 void onStart(ServiceInstance service) async {
-  Get.lazyPut(() => HomeController());
   Get.lazyPut(() => PreferenceController());
-
+  Get.lazyPut(() => HomeController());
   final homeController = Get.find<HomeController>();
 
   if (service is AndroidServiceInstance) {
@@ -133,10 +132,14 @@ void onStart(ServiceInstance service) async {
     });
   }
 
-  Timer.periodic(const Duration(seconds: 10), (timer) async {
+  Timer.periodic(const Duration(seconds: 5), (timer) async {
+    await homeController.clockInCheck();
+    await homeController.clockOutCheck();
+    await homeController.getUserSettings();
+
     Position position = await Geolocator.getCurrentPosition(
       locationSettings: const LocationSettings(
-        accuracy: LocationAccuracy.bestForNavigation,
+        accuracy: LocationAccuracy.best,
       ),
     );
 
@@ -198,6 +201,8 @@ void onStart(ServiceInstance service) async {
               } catch (e) {
                 print("❌ Error sending location: $e");
               }
+            } else {
+              // ColorLog.cyan('isWithinRadius == false');
             }
           }
         } else if (userSettings.autoInOut == '0') {
@@ -361,17 +366,11 @@ class HomeController extends GetxController {
   }
 
   @override
-  void onInit() {
+  void onInit() async {
     super.onInit();
-    getUserSettings();
-    clockInCheck();
-    clockOutCheck();
-  }
-
-  @override
-  void onReady() {
-    initializeService();
-    super.onReady();
+    await clockInCheck();
+    await clockOutCheck();
+    await getUserSettings();
   }
 
   void startBackgroundService() async {
@@ -450,6 +449,8 @@ class HomeController extends GetxController {
   }
 
   Future<bool> checkIsWithinCompanyRadius() async {
+    ColorLog.devLog(settingsData.toJson());
+
     if (settingsData.value == null) {
       _showSnackbar("Company location settings not available", false);
       return false;
@@ -482,6 +483,7 @@ class HomeController extends GetxController {
             LocationSettingResponse.fromJson(response.data).data?.settingsData;
         if (settingsData.value != null) {
           _prefs.saveSettingsData(settingsData.value!);
+          initializeService();
         }
       }
     } catch (e) {
@@ -599,6 +601,7 @@ class HomeController extends GetxController {
             MGLSettingsResponse.fromJson(response.data).data.settingsData;
 
         if (mglSettingsList.isNotEmpty) {
+          initializeService();
           _prefs.saveMglSettings(mglSettingsList);
         }
       }
