@@ -7,6 +7,7 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../data/location_response_model.dart';
+import '../../utils/colorful_log.dart';
 
 class LocationServiceManager {
   static final LocationServiceManager _instance =
@@ -16,12 +17,10 @@ class LocationServiceManager {
 
   LocationServiceManager._internal();
 
-  // Streams for notifying UI components
   final _locationStream = StreamController<Position>.broadcast();
   final _clockInStatusStream = StreamController<bool>.broadcast();
   final _clockOutStatusStream = StreamController<bool>.broadcast();
 
-  // Getters for the streams
   Stream<Position> get locationUpdates => _locationStream.stream;
   Stream<bool> get clockInStatus => _clockInStatusStream.stream;
   Stream<bool> get clockOutStatus => _clockOutStatusStream.stream;
@@ -59,7 +58,6 @@ class LocationServiceManager {
       ),
     );
 
-    // Add communication channel between service and UI
     FlutterBackgroundService().on('location_update').listen((event) {
       if (event != null &&
           event['latitude'] != null &&
@@ -135,7 +133,6 @@ void onStart(ServiceInstance service) async {
     );
   }
 
-  ////// shered prefs =====================
   final prefs = await SharedPreferences.getInstance();
   final String? accessToken = prefs.getString("ACCESS_TOKEN");
 
@@ -161,11 +158,9 @@ void onStart(ServiceInstance service) async {
     userSettings = getUserSettings(prefs);
     mglSettings = getMglSettings(prefs);
 
-    // Get updated clock statuses after the checks
     bool newClockInStatus = prefs.getBool("USER_CLOCK_IN_STATUS") ?? false;
     bool newClockOutStatus = prefs.getBool("USER_CLOCK_OUT_STATUS") ?? false;
 
-    // Send status updates to UI if they've changed
     if (isClockedIn != newClockInStatus) {
       isClockedIn = newClockInStatus;
       service.invoke('clock_in_status', {
@@ -186,19 +181,10 @@ void onStart(ServiceInstance service) async {
       ),
     );
 
-    // Send location update to the UI
     service.invoke('location_update', {
       'latitude': position.latitude,
       'longitude': position.longitude,
     });
-
-    // ColorLog.magenta('=====> ${position.latitude} ${position.longitude}=====');
-    // ColorLog.devLog(settingsData!.toJson());
-    // ColorLog.devLog(userSettings!.toJson());
-    // // ColorLog.magenta(mglSettings);
-    // ColorLog.magenta('isClockedIn :$isClockedIn');
-    // ColorLog.magenta('isClockedOut :$isClockedOut');
-    // ColorLog.magenta('=======================================================');
 
     if (userSettings != null) {
       if (userSettings!.settingsType == 'SGL') {
@@ -224,8 +210,6 @@ void onStart(ServiceInstance service) async {
                 accessToken,
                 prefs,
               );
-
-              // Update and send clock-out status after background operation
               isClockedOut = prefs.getBool("USER_CLOCK_OUT_STATUS") ?? false;
               service.invoke('clock_out_status', {
                 'status': isClockedOut,
@@ -244,7 +228,6 @@ void onStart(ServiceInstance service) async {
               settingsLong: settingsData!.longitude,
               settingRadius: settingsData!.redus,
             )) {
-              // Clock in
               await backgroundClockIn(
                 position.latitude,
                 position.longitude,
@@ -252,8 +235,6 @@ void onStart(ServiceInstance service) async {
                 accessToken,
                 prefs,
               );
-
-              // Update and send clock-in status after background operation
               isClockedIn = prefs.getBool("USER_CLOCK_IN_STATUS") ?? false;
               service.invoke('clock_in_status', {
                 'status': isClockedIn,
@@ -263,8 +244,6 @@ void onStart(ServiceInstance service) async {
               service.invoke('clock_out_status', {
                 'status': isClockedOut,
               });
-
-              // Send location
               await trackLocation(
                 position.latitude,
                 position.longitude,
@@ -273,11 +252,13 @@ void onStart(ServiceInstance service) async {
             }
           }
         } else if (userSettings?.autoInOut == '0') {
-          await trackLocation(
-            position.latitude,
-            position.longitude,
-            accessToken,
-          );
+          if (isClockedIn == true) {
+            await trackLocation(
+              position.latitude,
+              position.longitude,
+              accessToken,
+            );
+          }
         }
       } else if (userSettings?.settingsType == 'MGL') {
         if (userSettings!.autoInOut == '1') {
@@ -293,33 +274,6 @@ void onStart(ServiceInstance service) async {
                   settingRadius: mgl.redus,
                 )) {
                   withInRadiusStatus = true;
-                  // Send location
-                  await trackLocation(
-                    position.latitude,
-                    position.longitude,
-                    accessToken,
-                  );
-                } else {
-                  await backgroundClockIn(
-                    position.latitude,
-                    position.longitude,
-                    settingsData!.settingsId,
-                    accessToken,
-                    prefs,
-                  );
-
-                  // Update and send clock-in status after operation
-                  isClockedIn = prefs.getBool("USER_CLOCK_IN_STATUS") ?? false;
-                  service.invoke('clock_in_status', {
-                    'status': isClockedIn,
-                  });
-
-                  isClockedOut =
-                      prefs.getBool("USER_CLOCK_OUT_STATUS") ?? false;
-                  service.invoke('clock_out_status', {
-                    'status': isClockedOut,
-                  });
-
                   await trackLocation(
                     position.latitude,
                     position.longitude,
@@ -337,7 +291,6 @@ void onStart(ServiceInstance service) async {
                   prefs,
                 );
 
-                // Update and send clock status after operation
                 isClockedIn = prefs.getBool("USER_CLOCK_IN_STATUS") ?? false;
                 service.invoke('clock_in_status', {
                   'status': isClockedIn,
@@ -348,7 +301,7 @@ void onStart(ServiceInstance service) async {
                   'status': isClockedOut,
                 });
 
-                withInRadiusStatus = true;
+                withInRadiusStatus = false;
               }
             }
           } else if (isClockedIn == false) {
@@ -369,7 +322,6 @@ void onStart(ServiceInstance service) async {
                     prefs,
                   );
 
-                  // Update and send clock status after operation
                   isClockedIn = prefs.getBool("USER_CLOCK_IN_STATUS") ?? false;
                   service.invoke('clock_in_status', {
                     'status': isClockedIn,
@@ -391,20 +343,42 @@ void onStart(ServiceInstance service) async {
             }
           }
         } else if (userSettings?.autoInOut == '0') {
-          await trackLocation(
-            position.latitude,
-            position.longitude,
-            accessToken,
-          );
+          if (isClockedIn == true) {
+            var withInRadiusStatus = false;
+            if (mglSettings!.isNotEmpty) {
+              for (var mgl in mglSettings!) {
+                if (isWithinRadius(
+                  userLat: position.latitude,
+                  userLon: position.longitude,
+                  settingsLat: mgl.latitude,
+                  settingsLong: mgl.longitude,
+                  settingRadius: mgl.redus,
+                )) {
+                  withInRadiusStatus = true;
+                }
+              }
+            }
+
+            if (withInRadiusStatus == true) {
+              await trackLocation(
+                position.latitude,
+                position.longitude,
+                accessToken,
+              );
+            }
+            withInRadiusStatus = false;
+          }
         }
       } else if (userSettings?.settingsType == 'MIO') {
-        // NO RADIUS CHECKING ONLY AUTO IN OUT
+        if (isClockedIn == true) {
+          await trackLocation(
+              position.latitude, position.longitude, accessToken);
+        }
       }
     }
   });
 }
 
-// 4. Create local helper functions for the background service
 SettingsData? getSettingsData(SharedPreferences prefs) {
   String? jsonString = prefs.getString("SETTINGS_DATA");
   if (jsonString != null) {
@@ -485,16 +459,13 @@ Future<void> backgroundGetUserSettings(
 
     if (response.statusCode == 200) {
       final settings = UserSettingsResponse.fromJson(response.data).data;
-      if (settings != null) {
-        // Save the settings to SharedPreferences
-        final String jsonString = jsonEncode(settings.toJson());
-        await prefs.setString("USER_SETTINGS_DATA", jsonString);
+      final String jsonString = jsonEncode(settings.toJson());
+      await prefs.setString("USER_SETTINGS_DATA", jsonString);
 
-        if (settings.settingsType == 'SGL') {
-          await backgroundGetSettings(prefs, accessToken);
-        } else if (settings.settingsType == 'MGL') {
-          await backgroundGetMglSettings(prefs, accessToken);
-        }
+      if (settings.settingsType == 'SGL') {
+        await backgroundGetSettings(prefs, accessToken);
+      } else if (settings.settingsType == 'MGL') {
+        await backgroundGetMglSettings(prefs, accessToken);
       }
     }
   } catch (e) {

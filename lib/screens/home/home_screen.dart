@@ -222,7 +222,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                   onPressed: () async {
                     if (await controller.checkIsWithinCompanyRadius()) {
                       if (!isClockedIn) {
-                        if (controller.autoInOutStatus.value) {
+                        if (controller.autoInOutStatus.value == false) {
                           controller.clockIn();
                         } else {
                           Fluttertoast.showToast(
@@ -259,7 +259,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 return ElevatedButton.icon(
                   onPressed: () async {
                     if (isClockedIn) {
-                      if (controller.autoInOutStatus.value) {
+                      if (controller.autoInOutStatus.value == false) {
                         controller.clockOut();
                       } else {
                         Fluttertoast.showToast(

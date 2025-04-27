@@ -74,6 +74,26 @@ class HomeController extends GetxController {
     return distance <= settingsData.value!.redus;
   }
 
+  bool isWithinRadiusMulti({
+    required double userLat,
+    required double userLon,
+    required double settingsLat,
+    required double settingsLong,
+    required int settingRadius,
+  }) {
+    const double earthRadius = 6371000;
+    double toRadians(double degrees) => degrees * (pi / 180);
+    double dLat = toRadians(userLat - settingsLat);
+    double dLon = toRadians(userLon - settingsLong);
+    double lat1 = toRadians(settingsLat);
+    double lat2 = toRadians(userLat);
+    double a = sin(dLat / 2) * sin(dLat / 2) +
+        sin(dLon / 2) * sin(dLon / 2) * cos(lat1) * cos(lat2);
+    double c = 2 * atan2(sqrt(a), sqrt(1 - a));
+    double distance = earthRadius * c;
+    return distance <= settingRadius;
+  }
+
   @override
   void onInit() async {
     super.onInit();
@@ -107,29 +127,84 @@ class HomeController extends GetxController {
 
   Future<void> clockIn() async {
     try {
-      if (!await checkIsWithinCompanyRadius()) return;
+      if (userSettings.value?.settingsType == 'SGL') {
+        if (!await checkIsWithinCompanyRadius()) return;
 
-      Position position = await Geolocator.getCurrentPosition(
-          locationSettings: const LocationSettings(
-              accuracy: LocationAccuracy.bestForNavigation));
+        Position position = await Geolocator.getCurrentPosition(
+            locationSettings: const LocationSettings(
+                accuracy: LocationAccuracy.bestForNavigation));
 
-      final response = await _dio.post(
-        'http://attendance.iotblitz.com/api/clock_in',
-        options: _getAuthHeaders(_prefs.accessTokens),
-        data: {
-          "latitude": position.latitude,
-          "longitude": position.longitude,
-          "location_setting": settingsData.value?.settingsId ?? 0,
-        },
-      );
+        final response = await _dio.post(
+          'http://attendance.iotblitz.com/api/clock_in',
+          options: _getAuthHeaders(_prefs.accessTokens),
+          data: {
+            "latitude": position.latitude,
+            "longitude": position.longitude,
+            "location_setting": settingsData.value?.settingsId ?? 0,
+          },
+        );
 
-      if (response.statusCode == 200) {
-        _showSnackbar(response.data['data']['message']?.toString() ?? "", true);
-        _prefs.setIsClockedIn(true);
-        _prefs.setIsClockedOut(false);
-        // _serviceManager.startService();
+        if (response.statusCode == 200) {
+          _showSnackbar(
+              response.data['data']['message']?.toString() ?? "", true);
+          _prefs.setIsClockedIn(true);
+          _prefs.setIsClockedOut(false);
+          // _serviceManager.startService();
 
-        await Future.wait([clockInCheck(), clockOutCheck()]);
+          await Future.wait([clockInCheck(), clockOutCheck()]);
+        }
+      } else if (userSettings.value?.settingsType == 'MGL') {
+        ///
+
+        if (!await checkIsWithinCompanyRadiusMGL()) return;
+
+        Position position = await Geolocator.getCurrentPosition(
+            locationSettings: const LocationSettings(
+                accuracy: LocationAccuracy.bestForNavigation));
+
+        final response = await _dio.post(
+          'http://attendance.iotblitz.com/api/clock_in',
+          options: _getAuthHeaders(_prefs.accessTokens),
+          data: {
+            "latitude": position.latitude,
+            "longitude": position.longitude,
+            "location_setting": settingsData.value?.settingsId ?? 0,
+          },
+        );
+
+        if (response.statusCode == 200) {
+          _showSnackbar(
+              response.data['data']['message']?.toString() ?? "", true);
+          _prefs.setIsClockedIn(true);
+          _prefs.setIsClockedOut(false);
+          // _serviceManager.startService();
+
+          await Future.wait([clockInCheck(), clockOutCheck()]);
+        }
+      } else {
+        Position position = await Geolocator.getCurrentPosition(
+            locationSettings: const LocationSettings(
+                accuracy: LocationAccuracy.bestForNavigation));
+
+        final response = await _dio.post(
+          'http://attendance.iotblitz.com/api/clock_in',
+          options: _getAuthHeaders(_prefs.accessTokens),
+          data: {
+            "latitude": position.latitude,
+            "longitude": position.longitude,
+            "location_setting": settingsData.value?.settingsId ?? 0,
+          },
+        );
+
+        if (response.statusCode == 200) {
+          _showSnackbar(
+              response.data['data']['message']?.toString() ?? "", true);
+          _prefs.setIsClockedIn(true);
+          _prefs.setIsClockedOut(false);
+          // _serviceManager.startService();
+
+          await Future.wait([clockInCheck(), clockOutCheck()]);
+        }
       }
     } catch (e) {
       _handleError("Clock in failed", e);
@@ -183,6 +258,37 @@ class HomeController extends GetxController {
       return isWithin;
     } catch (e) {
       _handleError("Location check failed", e);
+      return false;
+    }
+  }
+
+  Future<bool> checkIsWithinCompanyRadiusMGL() async {
+    if (mglSettingsList.isNotEmpty) {
+      Position position = await Geolocator.getCurrentPosition(
+          locationSettings: const LocationSettings(
+              accuracy: LocationAccuracy.bestForNavigation));
+
+      var withInRadiusStatus = false;
+
+      for (var mgl in mglSettingsList) {
+        if (isWithinRadiusMulti(
+          userLat: position.latitude,
+          userLon: position.longitude,
+          settingsLat: mgl.latitude,
+          settingsLong: mgl.longitude,
+          settingRadius: mgl.redus,
+        )) {
+          withInRadiusStatus = true;
+        }
+      }
+
+      if (withInRadiusStatus == true) {
+        return true;
+      } else {
+        _showSnackbar("You are not within the company radius!", false);
+        return false;
+      }
+    } else {
       return false;
     }
   }
@@ -293,11 +399,12 @@ class HomeController extends GetxController {
 
         if (userSettings.value != null) {
           autoInOutStatus.value = userSettings.value?.autoInOut == '1';
-
           if (userSettings.value!.settingsType == 'SGL') {
             _getSettings();
           } else if (userSettings.value!.settingsType == 'MGL') {
             _getMglSettings();
+          } else if (userSettings.value!.settingsType == 'MIO') {
+            _getSettings();
           }
         }
       }
@@ -316,10 +423,9 @@ class HomeController extends GetxController {
       if (response.statusCode == 200) {
         mglSettingsList.value =
             MGLSettingsResponse.fromJson(response.data).data.settingsData;
-
         if (mglSettingsList.isNotEmpty) {
           _prefs.saveMglSettings(mglSettingsList);
-          _serviceManager.startService();
+          _getSettings();
         }
       }
     } catch (e) {
