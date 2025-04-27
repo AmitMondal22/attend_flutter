@@ -1,4 +1,6 @@
+import 'package:attend_master/utils/colorful_log.dart';
 import 'package:flutter/material.dart';
+import 'package:fluttertoast/fluttertoast.dart';
 import 'package:get/get.dart';
 
 import '../../utils/common_utils.dart';
@@ -220,7 +222,12 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                   onPressed: () async {
                     if (await controller.checkIsWithinCompanyRadius()) {
                       if (!isClockedIn) {
-                        controller.clockIn();
+                        if (controller.autoInOutStatus.value) {
+                          controller.clockIn();
+                        } else {
+                          Fluttertoast.showToast(
+                              msg: 'Automatic In Out Disabled !');
+                        }
                       }
                     }
                   },
@@ -252,7 +259,12 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 return ElevatedButton.icon(
                   onPressed: () async {
                     if (isClockedIn) {
-                      controller.clockOut();
+                      if (controller.autoInOutStatus.value) {
+                        controller.clockOut();
+                      } else {
+                        Fluttertoast.showToast(
+                            msg: 'Automatic In Out Disabled !');
+                      }
                     }
                   },
                   style: ElevatedButton.styleFrom(

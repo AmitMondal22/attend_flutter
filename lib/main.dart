@@ -1,25 +1,30 @@
 import 'dart:async';
 import 'dart:ui' as ui;
 import 'dart:ui';
-
 import 'package:attend_master/utils/global_bindings.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
-
+import 'data/preference_controller.dart';
 import 'navigation/app_routes.dart';
 import 'navigation/route_names.dart';
+import 'screens/home/location_service_manager.dart';
 
 Future<void> main() async {
   RenderErrorBox.backgroundColor = Colors.black26;
   RenderErrorBox.textStyle = ui.TextStyle(color: Colors.white);
-  SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
-      systemNavigationBarColor: Colors.white,
-      systemNavigationBarIconBrightness: Brightness.light,
-      statusBarColor: Colors.transparent,
-      statusBarIconBrightness: Brightness.dark));
   WidgetsFlutterBinding.ensureInitialized();
+
+  SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
+    systemNavigationBarColor: Colors.white,
+    systemNavigationBarIconBrightness: Brightness.light,
+    statusBarColor: Colors.transparent,
+    statusBarIconBrightness: Brightness.dark,
+  ));
+
+  // Initialize service, but don't start it yet
+  await LocationServiceManager().initializeService();
   runApp(const MyApp());
 }
 

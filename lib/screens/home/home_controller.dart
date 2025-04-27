@@ -1,53 +1,15 @@
 import 'dart:async';
 import 'dart:math';
-
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_background_service/flutter_background_service.dart';
-import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:get/get.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-
 import '../../../../data/preference_controller.dart';
 import '../../data/location_response_model.dart';
 import '../../navigation/route_names.dart';
 import '../../utils/colorful_log.dart';
-
-Future<void> initializeService() async {
-  final service = FlutterBackgroundService();
-
-  const AndroidNotificationChannel channel = AndroidNotificationChannel(
-    'location_tracking',
-    'Location Tracking',
-    description: 'Shows notification when location is being tracked',
-    importance: Importance.high,
-  );
-
-  final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
-      FlutterLocalNotificationsPlugin();
-  await flutterLocalNotificationsPlugin
-      .resolvePlatformSpecificImplementation<
-          AndroidFlutterLocalNotificationsPlugin>()
-      ?.createNotificationChannel(channel);
-
-  await service.configure(
-    androidConfiguration: AndroidConfiguration(
-      onStart: onStart,
-      autoStart: true,
-      isForegroundMode: true,
-      notificationChannelId: 'location_tracking',
-      initialNotificationTitle: 'Location Tracking',
-      initialNotificationContent: 'Tracking in the background...',
-      foregroundServiceNotificationId: 888,
-    ),
-    iosConfiguration: IosConfiguration(
-      onForeground: onStart,
-      onBackground: onIosBackground,
-    ),
-  );
-}
+import 'location_service_manager.dart';
 
 bool isWithinRadius({
   required double userLat,
@@ -69,265 +31,6 @@ bool isWithinRadius({
   return distance <= settingRadius;
 }
 
-@pragma('vm:entry-point')
-void onStart(ServiceInstance service) async {
-  Get.lazyPut(() => PreferenceController());
-  Get.lazyPut(() => HomeController());
-  final homeController = Get.find<HomeController>();
-
-  if (service is AndroidServiceInstance) {
-    service.setForegroundNotificationInfo(
-      title: "Location Tracking",
-      content: "Tracking in the background...",
-    );
-  }
-
-  ////// shered prefs =====================
-
-  final prefs = await SharedPreferences.getInstance();
-  final String? accessToken = prefs.getString("ACCESS_TOKEN");
-
-  SettingsData? getSettingsData() {
-    String? jsonString = prefs.getString("SETTINGS_DATA");
-    if (jsonString != null) {
-      return SettingsData.fromJsonString(jsonString);
-    }
-    return null;
-  }
-
-  UserSettings? getUserSettings() {
-    String? jsonString = prefs.getString("USER_SETTINGS_DATA");
-    if (jsonString != null) {
-      return UserSettings.fromJsonString(jsonString);
-    }
-    return null;
-  }
-
-  List<MGListItem> getMglSettings() {
-    final jsonString = prefs.getString("MGL_SETTINGS_DATA");
-    if (jsonString == null) return [];
-    return MGListItem.decodeList(jsonString);
-  }
-
-  SettingsData? settingsData = getSettingsData();
-  UserSettings? userSettings = getUserSettings();
-  List<MGListItem>? mglSettings = getMglSettings();
-
-  bool isClockedIn = prefs.getBool("USER_CLOCK_IN_STATUS") ?? false;
-  bool isClockedOut = prefs.getBool("USER_CLOCK_OUT_STATUS") ?? false;
-
-  Future<bool> setIsClockedOut(bool isClockedOut) {
-    return prefs.setBool("USER_CLOCK_OUT_STATUS", isClockedOut);
-  }
-
-  Future<bool> setIsClockedIn(bool isClockedIn) {
-    return prefs.setBool("USER_CLOCK_IN_STATUS", isClockedIn);
-  }
-
-  ////// shered prefs =====================
-
-  if (service is AndroidServiceInstance) {
-    service.on('stopService').listen((event) {
-      service.stopSelf();
-    });
-  }
-
-  Timer.periodic(const Duration(seconds: 5), (timer) async {
-    await homeController.clockInCheck();
-    await homeController.clockOutCheck();
-    await homeController.getUserSettings();
-
-    Position position = await Geolocator.getCurrentPosition(
-      locationSettings: const LocationSettings(
-        accuracy: LocationAccuracy.best,
-      ),
-    );
-
-    if (userSettings != null) {
-      if (userSettings!.settingsType == 'SGL') {
-        if (userSettings.autoInOut == '1') {
-          if (isClockedIn == true) {
-            if (isWithinRadius(
-              userLat: position.latitude,
-              userLon: position.longitude,
-              settingsLat: settingsData!.latitude,
-              settingsLong: settingsData!.latitude,
-              settingRadius: settingsData.redus,
-            )) {
-              Dio dio = Dio();
-              try {
-                await dio.post(
-                  'http://attendance.iotblitz.com/api/location/track',
-                  data: {
-                    "latitude": position.latitude,
-                    "longitude": position.longitude,
-                  },
-                  options: _getAuthHeaders(accessToken),
-                );
-                print(
-                    "✅ Location sent: ${position.latitude}, ${position.longitude}");
-              } catch (e) {
-                print(accessToken);
-                print("❌ Error sending location: $e");
-              }
-            } else {
-              await homeController.clockOut();
-              setIsClockedOut(true);
-              setIsClockedIn(false);
-            }
-          } else if (isClockedIn == false) {
-            if (isWithinRadius(
-              userLat: position.latitude,
-              userLon: position.longitude,
-              settingsLat: settingsData!.latitude,
-              settingsLong: settingsData!.longitude,
-              settingRadius: settingsData.redus,
-            )) {
-              await homeController.clockIn();
-              setIsClockedOut(false);
-              setIsClockedIn(true);
-              Dio dio = Dio();
-              try {
-                await dio.post(
-                  'http://attendance.iotblitz.com/api/location/track',
-                  data: {
-                    "latitude": position.latitude,
-                    "longitude": position.longitude,
-                  },
-                  options: _getAuthHeaders(accessToken),
-                );
-                print(
-                    "✅ Location sent: ${position.latitude}, ${position.longitude}");
-              } catch (e) {
-                print("❌ Error sending location: $e");
-              }
-            } else {
-              // ColorLog.cyan('isWithinRadius == false');
-            }
-          }
-        } else if (userSettings.autoInOut == '0') {
-          Dio dio = Dio();
-          try {
-            await dio.post(
-              'http://attendance.iotblitz.com/api/location/track',
-              data: {
-                "latitude": position.latitude,
-                "longitude": position.longitude,
-              },
-              options: _getAuthHeaders(accessToken),
-            );
-            print(
-                "✅ Location sent: ${position.latitude}, ${position.longitude}");
-          } catch (e) {
-            print("❌ Error sending location: $e");
-          }
-        }
-      } else if (userSettings.settingsType == 'MGL') {
-        if (userSettings.autoInOut == '1') {
-          if (isClockedIn == true) {
-            if (mglSettings.isNotEmpty) {
-              var withInRadiusStatus = false;
-              for (var mgl in mglSettings) {
-                if (isWithinRadius(
-                  userLat: position.latitude,
-                  userLon: position.longitude,
-                  settingsLat: mgl.latitude,
-                  settingsLong: mgl.longitude,
-                  settingRadius: mgl.redus,
-                )) {
-                  withInRadiusStatus = true;
-                  Dio dio = Dio();
-                  try {
-                    await dio.post(
-                      'http://attendance.iotblitz.com/api/location/track',
-                      data: {
-                        "latitude": position.latitude,
-                        "longitude": position.longitude,
-                      },
-                      options: _getAuthHeaders(accessToken),
-                    );
-                    print(
-                        "✅ Location sent: ${position.latitude}, ${position.longitude}");
-                  } catch (e) {
-                    print(accessToken);
-                    print("❌ Error sending location: $e");
-                  }
-                } else {
-                  await homeController.clockIn();
-
-                  setIsClockedOut(false);
-                  setIsClockedIn(true);
-                }
-              }
-
-              if (withInRadiusStatus == false) {
-                await homeController.clockOut();
-                setIsClockedOut(true);
-                withInRadiusStatus = true;
-              }
-            }
-          } else if (isClockedIn == false) {
-            if (mglSettings.isNotEmpty) {
-              for (var mgl in mglSettings) {
-                if (isWithinRadius(
-                  userLat: position.latitude,
-                  userLon: position.longitude,
-                  settingsLat: mgl.latitude,
-                  settingsLong: mgl.longitude,
-                  settingRadius: mgl.redus,
-                )) {
-                  await homeController.clockIn();
-
-                  setIsClockedOut(false);
-                  setIsClockedIn(true);
-
-                  Dio dio = Dio();
-                  try {
-                    await dio.post(
-                      'http://attendance.iotblitz.com/api/location/track',
-                      data: {
-                        "latitude": position.latitude,
-                        "longitude": position.longitude,
-                      },
-                      options: _getAuthHeaders(accessToken),
-                    );
-                    print(
-                        "✅ Location sent: ${position.latitude}, ${position.longitude}");
-                  } catch (e) {
-                    print("❌ Error sending location: $e");
-                  }
-                }
-              }
-            }
-          }
-        } else if (userSettings.autoInOut == '0') {
-          Dio dio = Dio();
-          try {
-            await dio.post(
-              'http://attendance.iotblitz.com/api/location/track',
-              data: {
-                "latitude": position.latitude,
-                "longitude": position.longitude,
-              },
-              options: _getAuthHeaders(accessToken),
-            );
-            print(
-                "✅ Location sent: ${position.latitude}, ${position.longitude}");
-          } catch (e) {
-            print("❌ Error sending location: $e");
-          }
-        }
-      }
-    }
-  });
-}
-
-@pragma('vm:entry-point')
-bool onIosBackground(ServiceInstance service) {
-  print("✅ iOS background execution started!");
-  return true;
-}
-
 Options _getAuthHeaders(String? token) => Options(
       headers: {
         "Accept": "application/json",
@@ -338,6 +41,7 @@ Options _getAuthHeaders(String? token) => Options(
 class HomeController extends GetxController {
   final Dio _dio = Dio();
   final _prefs = Get.find<PreferenceController>();
+  final _serviceManager = LocationServiceManager();
   RxString currentTime = ''.obs;
   Rx<SettingsData?> settingsData = Rx<SettingsData?>(null);
   Rx<ClockInDataObj?> clockInDataObj = Rx<ClockInDataObj?>(null);
@@ -345,6 +49,11 @@ class HomeController extends GetxController {
   RxBool clockInClockOutDataLoading = true.obs;
   Rx<UserSettings?> userSettings = Rx<UserSettings?>(null);
   RxList<MGListItem> mglSettingsList = <MGListItem>[].obs;
+  RxBool autoInOutStatus = false.obs;
+
+  // Stream subscriptions
+  late StreamSubscription<bool> _clockInStatusSubscription;
+  late StreamSubscription<bool> _clockOutStatusSubscription;
 
   bool isWithinRadius(
     double userLat,
@@ -371,21 +80,29 @@ class HomeController extends GetxController {
     await clockInCheck();
     await clockOutCheck();
     await getUserSettings();
-  }
 
-  void startBackgroundService() async {
-    final service = FlutterBackgroundService();
-    bool isRunning = await service.isRunning();
+    // Listen to streams from service manager
+    _clockInStatusSubscription = _serviceManager.clockInStatus.listen((status) {
+      _prefs.setIsClockedIn(status);
+      clockInCheck();
+    });
 
-    if (!isRunning) {
-      service.startService();
-      print("📍 Background location tracking started...");
+    _clockOutStatusSubscription =
+        _serviceManager.clockOutStatus.listen((status) {
+      _prefs.setIsClockedOut(status);
+      clockOutCheck();
+    });
+
+    if (_prefs.isClockedIn) {
+      // _serviceManager.startService();
     }
   }
 
-  void stopBackgroundService() {
-    FlutterBackgroundService().invoke("stopService");
-    print("❌ Background service stopped.");
+  @override
+  void onClose() {
+    _clockInStatusSubscription.cancel();
+    _clockOutStatusSubscription.cancel();
+    super.onClose();
   }
 
   Future<void> clockIn() async {
@@ -410,7 +127,7 @@ class HomeController extends GetxController {
         _showSnackbar(response.data['data']['message']?.toString() ?? "", true);
         _prefs.setIsClockedIn(true);
         _prefs.setIsClockedOut(false);
-        startBackgroundService();
+        // _serviceManager.startService();
 
         await Future.wait([clockInCheck(), clockOutCheck()]);
       }
@@ -439,7 +156,7 @@ class HomeController extends GetxController {
         _showSnackbar(response.data['data']['message']?.toString() ?? "", true);
         _prefs.setIsClockedIn(false);
         _prefs.setIsClockedOut(true);
-        stopBackgroundService();
+        // _serviceManager.startService();
 
         await Future.wait([clockOutCheck(), clockInCheck()]);
       }
@@ -449,8 +166,6 @@ class HomeController extends GetxController {
   }
 
   Future<bool> checkIsWithinCompanyRadius() async {
-    ColorLog.devLog(settingsData.toJson());
-
     if (settingsData.value == null) {
       _showSnackbar("Company location settings not available", false);
       return false;
@@ -483,7 +198,7 @@ class HomeController extends GetxController {
             LocationSettingResponse.fromJson(response.data).data?.settingsData;
         if (settingsData.value != null) {
           _prefs.saveSettingsData(settingsData.value!);
-          initializeService();
+          _serviceManager.startService();
         }
       }
     } catch (e) {
@@ -528,10 +243,11 @@ class HomeController extends GetxController {
     }
   }
 
-  void logout() {
+  void logout() async {
     _prefs.clearLoginCred();
     _prefs.changeLoginState(false);
-    stopBackgroundService();
+    await _serviceManager.stopService();
+    _prefs.clearAll();
     _showSnackbar("Logout successful!", true);
     Get.offAllNamed(RouteNames.login);
   }
@@ -571,12 +287,13 @@ class HomeController extends GetxController {
       );
       if (response.statusCode == 200) {
         userSettings.value = UserSettingsResponse.fromJson(response.data).data;
-        print(response.data);
         if (userSettings.value != null) {
           _prefs.saveUserSettings(userSettings.value!);
         }
 
         if (userSettings.value != null) {
+          autoInOutStatus.value = userSettings.value?.autoInOut == '1';
+
           if (userSettings.value!.settingsType == 'SGL') {
             _getSettings();
           } else if (userSettings.value!.settingsType == 'MGL') {
@@ -601,8 +318,8 @@ class HomeController extends GetxController {
             MGLSettingsResponse.fromJson(response.data).data.settingsData;
 
         if (mglSettingsList.isNotEmpty) {
-          initializeService();
           _prefs.saveMglSettings(mglSettingsList);
+          _serviceManager.startService();
         }
       }
     } catch (e) {
