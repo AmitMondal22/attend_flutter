@@ -24,6 +24,9 @@ dependencies:
 #  workmanager: ^0.5.2
   flutter_foreground_task: ^8.17.0
   fluttertoast: ^8.2.12
+  google_fonts: ^6.1.0
+  table_calendar: ^3.0.9
+  fl_chart: ^0.66.2
 
 dev_dependencies:
   flutter_test:

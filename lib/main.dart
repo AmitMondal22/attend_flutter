@@ -23,7 +23,6 @@ Future<void> main() async {
     statusBarIconBrightness: Brightness.dark,
   ));
 
-  // Initialize service, but don't start it yet
   await LocationServiceManager().initializeService();
   runApp(const MyApp());
 }

@@ -1,0 +1,2 @@
+C:/Bibek/projects/attend_flutter/android/app/.cxx/Debug/4li40112/x86_64/CMakeFiles/edit_cache.dir
+C:/Bibek/projects/attend_flutter/android/app/.cxx/Debug/4li40112/x86_64/CMakeFiles/rebuild_cache.dir

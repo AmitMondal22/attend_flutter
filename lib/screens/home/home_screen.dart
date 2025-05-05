@@ -2,9 +2,14 @@ import 'package:attend_master/utils/colorful_log.dart';
 import 'package:flutter/material.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:get/get.dart';
+import 'package:attend_master/screens/calendar/calendar_screen.dart';
+import 'package:attend_master/screens/reports/reports_screen.dart';
+import 'package:attend_master/screens/settings/settings_screen.dart';
 
+import '../../theme/app_theme.dart';
 import '../../utils/common_utils.dart';
 import 'home_controller.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -15,6 +20,14 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   final controller = Get.find<HomeController>();
+  int _selectedIndex = 0;
+
+  final List<Widget> _screens = [
+    _HomeContent(),
+    const CalendarScreen(),
+    const ReportsScreen(),
+    SettingsScreen(),
+  ];
 
   @override
   void initState() {
@@ -30,25 +43,90 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
-      body: SafeArea(
-        child: SingleChildScrollView(
-          child: Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _buildHeader(),
-                const SizedBox(height: 10),
-                _buildUserInfo(),
-                const SizedBox(height: 20),
-                _buildClockInOutCard(),
-                const SizedBox(height: 20),
-                _buildQuickActions(),
-                const SizedBox(height: 20),
-                _buildLogoutButton(),
-              ],
-            ),
+      backgroundColor: Colors.grey[50],
+      body: _screens[_selectedIndex],
+      bottomNavigationBar: _buildBottomNavigationBar(),
+    );
+  }
+
+  Widget _buildBottomNavigationBar() {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.1),
+            blurRadius: 10,
+            offset: const Offset(0, 5),
+          ),
+        ],
+      ),
+      child: BottomNavigationBar(
+        currentIndex: _selectedIndex,
+        onTap: (index) {
+          setState(() {
+            _selectedIndex = index;
+          });
+        },
+        type: BottomNavigationBarType.fixed,
+        selectedItemColor: AppTheme.lightTheme.colorScheme.primary,
+        unselectedItemColor: Colors.grey,
+        selectedLabelStyle: GoogleFonts.poppins(
+          fontSize: 12,
+          fontWeight: FontWeight.w500,
+        ),
+        unselectedLabelStyle: GoogleFonts.poppins(
+          fontSize: 12,
+          fontWeight: FontWeight.w500,
+        ),
+        items: const [
+          BottomNavigationBarItem(
+            icon: Icon(Icons.home),
+            label: 'Home',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.calendar_today),
+            label: 'Calendar',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.bar_chart),
+            label: 'Reports',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.settings),
+            label: 'Settings',
+          ),
+        ],
+      ),
+    );
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    Get.delete<HomeController>();
+    super.dispose();
+  }
+}
+
+class _HomeContent extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      child: SingleChildScrollView(
+        child: Padding(
+          padding: const EdgeInsets.all(20.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildHeader(),
+              const SizedBox(height: 20),
+              _buildUserInfo(),
+              const SizedBox(height: 20),
+              _buildClockInOutCard(),
+              const SizedBox(height: 20),
+              _buildQuickActions(),
+            ],
           ),
         ),
       ),
@@ -56,236 +134,342 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   }
 
   Widget _buildHeader() {
-    return const Row(
+    return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Text(
           'Attend Master',
-          style: TextStyle(
-            color: Colors.blueAccent,
-            fontWeight: FontWeight.bold,
-            fontSize: 18,
+          style: GoogleFonts.poppins(
+            fontSize: 24,
+            fontWeight: FontWeight.w600,
+            color: AppTheme.lightTheme.colorScheme.primary,
           ),
         ),
-        Icon(Icons.notifications_none),
+        Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: Colors.grey.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Icon(
+            Icons.notifications_none,
+            color: Colors.grey[800],
+            size: 24,
+          ),
+        ),
       ],
     );
   }
 
   Widget _buildUserInfo() {
-    return Container(
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(15),
-        color: Colors.grey.withOpacity(0.1),
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
       ),
-      padding: const EdgeInsets.all(15),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        mainAxisSize: MainAxisSize.max,
-        children: [
-          CircleAvatar(
-            backgroundColor: Colors.grey.withOpacity(0.5),
-            radius: 25,
-            child: const Text(
-              'AM',
-              style: TextStyle(fontSize: 18),
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: AppTheme.lightTheme.colorScheme.primary.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(
+                Icons.person,
+                size: 30,
+                color: AppTheme.lightTheme.colorScheme.primary,
+              ),
             ),
-          ),
-          const SizedBox(width: 10),
-          const Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                mainAxisSize: MainAxisSize.max,
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Amit Mondal',
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                    'Welcome back!',
+                    style: GoogleFonts.poppins(
+                      fontSize: 14,
+                      color: Colors.grey[600],
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  Text(
+                    'John Doe',
+                    style: GoogleFonts.poppins(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.grey[800],
+                    ),
                   ),
                 ],
               ),
-              Text('Software Engineer', style: TextStyle(fontSize: 14)),
-            ],
-          ),
-          const Spacer(),
-          Column(
-            children: [
-              Text(getFormattedDate(),
-                  style: const TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                  )).marginOnly(bottom: 10),
-              Obx(
-                () => Text(
-                  controller.currentTime.value,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    color: Colors.deepOrangeAccent,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ],
+            ),
+          ],
+        ),
       ),
     );
   }
 
   Widget _buildClockInOutCard() {
-    return Container(
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(15),
-        color: Colors.white,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withOpacity(0.2),
-            spreadRadius: 2,
-            blurRadius: 5,
-          ),
-        ],
+    final controller = Get.find<HomeController>();
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
       ),
-      padding: const EdgeInsets.all(15),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text('Clock In',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-              Text('Clock Out',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-            ],
-          ),
-          const SizedBox(height: 5),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Obx(
-                () => controller.clockInDataObj.value != null
-                    ? Text(
-                        controller.clockInDataObj.value!.clockInStatus == true
-                            ? controller
-                                .clockInDataObj.value!.clockInData!.inTime
-                                .toString()
-                            : '--:--:--',
-                        style: const TextStyle(
-                          fontSize: 14,
-                          color: Colors.black45,
-                        ),
-                      )
-                    : const Text(
-                        '--:--:--',
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: Colors.black45,
-                        ),
+      child: Padding(
+        padding: const EdgeInsets.all(20.0),
+        child: Column(
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Today\'s Status',
+                  style: GoogleFonts.poppins(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.grey[800],
+                  ),
+                ),
+                Obx(() {
+                  bool isClockedIn = false;
+                  if (controller.clockInDataObj.value != null) {
+                    isClockedIn =
+                        controller.clockInDataObj.value!.clockInStatus;
+                  }
+                  return Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: isClockedIn
+                          ? Colors.green.withOpacity(0.15)
+                          : Colors.grey.withOpacity(0.15),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                        color: isClockedIn
+                            ? Colors.green.withOpacity(0.3)
+                            : Colors.grey.withOpacity(0.3),
+                        width: 1,
                       ),
-              ),
-              Obx(
-                () => controller.clockOutDataObj.value != null
-                    ? Text(
-                        controller.clockOutDataObj.value!.clockOutStatus == true
-                            ? controller
-                                .clockOutDataObj.value!.clockOutData!.outTime
-                                .toString()
-                            : '--:--:--',
-                        style: const TextStyle(
-                          fontSize: 14,
-                          color: Colors.black45,
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          isClockedIn
+                              ? Icons.check_circle
+                              : Icons.circle_outlined,
+                          size: 16,
+                          color: isClockedIn ? Colors.green : Colors.grey,
                         ),
-                      )
-                    : const Text(
-                        '--:--:--',
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: Colors.black45,
+                        const SizedBox(width: 6),
+                        Text(
+                          isClockedIn ? 'Clocked In' : 'Not Clocked In',
+                          style: GoogleFonts.poppins(
+                            color: isClockedIn ? Colors.green : Colors.grey,
+                            fontWeight: FontWeight.w500,
+                            fontSize: 14,
+                          ),
                         ),
-                      ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 10),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Obx(() {
-                bool isClockedIn = false;
-
-                if (controller.clockInDataObj.value != null) {
-                  isClockedIn = controller.clockInDataObj.value!.clockInStatus;
-                }
-
-                return ElevatedButton.icon(
-                  onPressed: () async {
-                    if (await controller.checkIsWithinCompanyRadius()) {
-                      if (!isClockedIn) {
-                        if (controller.autoInOutStatus.value == false) {
-                          controller.clockIn();
-                        } else {
-                          Fluttertoast.showToast(
-                              msg: 'Automatic In Out Disabled !');
+                      ],
+                    ),
+                  );
+                }),
+              ],
+            ),
+            const SizedBox(height: 24),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Obx(
+                  () => controller.clockInDataObj.value != null
+                      ? _buildTimeCard(
+                          'Clock In',
+                          controller.clockInDataObj.value!.clockInStatus == true
+                              ? controller
+                                  .clockInDataObj.value!.clockInData!.inTime
+                                  .toString()
+                              : '--:--:--',
+                        )
+                      : _buildTimeCard('Clock In', '--:--:--'),
+                ),
+                Obx(
+                  () => controller.clockOutDataObj.value != null
+                      ? _buildTimeCard(
+                          'Clock Out',
+                          controller.clockOutDataObj.value!.clockOutStatus ==
+                                  true
+                              ? controller
+                                  .clockOutDataObj.value!.clockOutData!.outTime
+                                  .toString()
+                              : '--:--:--',
+                        )
+                      : _buildTimeCard('Clock Out', '--:--:--'),
+                ),
+              ],
+            ),
+            const SizedBox(height: 24),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: [
+                Obx(() {
+                  bool isClockedIn = false;
+                  if (controller.clockInDataObj.value != null) {
+                    isClockedIn =
+                        controller.clockInDataObj.value!.clockInStatus;
+                  }
+                  return Container(
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(12),
+                      boxShadow: [
+                        BoxShadow(
+                          color: isClockedIn
+                              ? Colors.grey.withOpacity(0.2)
+                              : AppTheme.lightTheme.colorScheme.primary
+                                  .withOpacity(0.3),
+                          blurRadius: 8,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: ElevatedButton.icon(
+                      onPressed: () async {
+                        if (await controller.checkIsWithinCompanyRadius()) {
+                          if (!isClockedIn) {
+                            if (controller.autoInOutStatus.value == false) {
+                              controller.clockIn();
+                            } else {
+                              Fluttertoast.showToast(
+                                  msg: 'Automatic In Out Disabled !');
+                            }
+                          }
                         }
-                      }
-                    }
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: isClockedIn
-                        ? Colors.grey.withOpacity(0.5)
-                        : Colors.green,
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(20)),
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                    elevation: 0,
-                  ),
-                  icon: Icon(isClockedIn ? Icons.brightness_1 : Icons.login,
-                      color: Colors.white, size: 18),
-                  label: const Text(
-                    'Clock In',
-                    style: TextStyle(color: Colors.white, fontSize: 14),
-                  ),
-                );
-              }),
-              Obx(() {
-                bool isClockedIn = false;
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: isClockedIn
+                            ? Colors.grey.withOpacity(0.5)
+                            : AppTheme.lightTheme.colorScheme.primary,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 20, vertical: 10),
+                        elevation: 0,
+                      ),
+                      icon: Icon(
+                        isClockedIn ? Icons.brightness_1 : Icons.login,
+                        color: Colors.white,
+                        size: 20,
+                      ),
+                      label: Text(
+                        'Clock In',
+                        style: GoogleFonts.poppins(
+                          color: Colors.white,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  );
+                }),
+                Obx(() {
+                  bool isClockedIn = false;
+                  if (controller.clockInDataObj.value != null) {
+                    isClockedIn =
+                        controller.clockInDataObj.value!.clockInStatus;
+                  }
+                  return Container(
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(12),
+                      boxShadow: [
+                        BoxShadow(
+                          color: isClockedIn
+                              ? Colors.orange.withOpacity(0.3)
+                              : Colors.grey.withOpacity(0.2),
+                          blurRadius: 8,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: ElevatedButton.icon(
+                      onPressed: () async {
+                        if (isClockedIn) {
+                          if (controller.autoInOutStatus.value == false) {
+                            controller.clockOut();
+                          } else {
+                            Fluttertoast.showToast(
+                                msg: 'Automatic In Out Disabled !');
+                          }
+                        }
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: isClockedIn
+                            ? Colors.orange
+                            : Colors.grey.withOpacity(0.5),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 20, vertical: 10),
+                        elevation: 0,
+                      ),
+                      icon: Icon(
+                        isClockedIn ? Icons.logout : Icons.brightness_1,
+                        color: Colors.white,
+                        size: 20,
+                      ),
+                      label: Text(
+                        'Clock Out',
+                        style: GoogleFonts.poppins(
+                          color: Colors.white,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  );
+                }),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 
-                if (controller.clockInDataObj.value != null) {
-                  isClockedIn = controller.clockInDataObj.value!.clockInStatus;
-                }
-
-                return ElevatedButton.icon(
-                  onPressed: () async {
-                    if (isClockedIn) {
-                      if (controller.autoInOutStatus.value == false) {
-                        controller.clockOut();
-                      } else {
-                        Fluttertoast.showToast(
-                            msg: 'Automatic In Out Disabled !');
-                      }
-                    }
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: isClockedIn
-                        ? Colors.amber
-                        : Colors.grey.withOpacity(0.5),
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(20)),
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                    elevation: 0,
-                  ),
-                  icon: Icon(isClockedIn ? Icons.logout : Icons.brightness_1,
-                      color: Colors.white, size: 18),
-                  label: const Text(
-                    'Clock Out',
-                    style: TextStyle(color: Colors.white, fontSize: 14),
-                  ),
-                );
-              }),
-            ],
+  Widget _buildTimeCard(String label, String time) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+      decoration: BoxDecoration(
+        color: Colors.grey.withOpacity(0.05),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: Colors.grey.withOpacity(0.1),
+          width: 1,
+        ),
+      ),
+      child: Column(
+        children: [
+          Text(
+            label,
+            style: GoogleFonts.poppins(
+              fontSize: 14,
+              color: Colors.grey[600],
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            time,
+            style: GoogleFonts.poppins(
+              fontSize: 20,
+              fontWeight: FontWeight.w600,
+              color: Colors.grey[800],
+            ),
           ),
         ],
       ),
@@ -321,80 +505,76 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       {'title': 'Work from Home', 'icon': Icons.home, 'color': Colors.red},
     ];
 
-    return GridView.builder(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 3,
-        crossAxisSpacing: 10,
-        mainAxisSpacing: 10,
-        childAspectRatio: 1,
-      ),
-      itemCount: actions.length,
-      itemBuilder: (context, index) {
-        return _buildActionCard(actions[index]);
-      },
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Quick Actions',
+          style: GoogleFonts.poppins(
+            fontSize: 18,
+            fontWeight: FontWeight.w600,
+            color: Colors.grey[800],
+          ),
+        ),
+        const SizedBox(height: 16),
+        GridView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 3,
+            crossAxisSpacing: 12,
+            mainAxisSpacing: 12,
+            childAspectRatio: 1,
+          ),
+          itemCount: actions.length,
+          itemBuilder: (context, index) {
+            return _buildActionCard(actions[index]);
+          },
+        ),
+      ],
     );
   }
 
   Widget _buildActionCard(Map<String, dynamic> action) {
-    return GestureDetector(
-      onTap: () {},
-      child: Container(
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(10),
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(12),
+        color: action['color'].withOpacity(0.1),
+        border: Border.all(
           color: action['color'].withOpacity(0.2),
-        ),
-        padding: const EdgeInsets.all(8),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(action['icon'], color: action['color'], size: 30),
-            const SizedBox(height: 5),
-            Text(
-              action['title'],
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ],
+          width: 1,
         ),
       ),
-    );
-  }
-
-  Widget _buildLogoutButton() {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 20),
-      child: Center(
-        child: ElevatedButton.icon(
-          onPressed: () {
-            controller.logout();
-          },
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.red,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(30),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(12),
+          onTap: () {},
+          child: Padding(
+            padding: const EdgeInsets.all(12),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  action['icon'],
+                  color: action['color'],
+                  size: 24,
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  action['title'],
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.poppins(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                    color: Colors.grey[800],
+                  ),
+                ),
+              ],
             ),
-            padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 15),
-            elevation: 0,
-          ),
-          icon: const Icon(Icons.logout, color: Colors.white),
-          label: const Text(
-            'Logout',
-            style: TextStyle(fontSize: 16, color: Colors.white),
           ),
         ),
       ),
     );
-  }
-
-  @override
-  void dispose() {
-    WidgetsBinding.instance.removeObserver(this);
-    Get.delete<HomeController>();
-    super.dispose();
   }
 }
