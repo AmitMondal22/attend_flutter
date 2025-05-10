@@ -7,7 +7,6 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../data/location_response_model.dart';
-import '../../utils/colorful_log.dart';
 
 class LocationServiceManager {
   static final LocationServiceManager _instance =

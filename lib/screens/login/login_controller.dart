@@ -31,7 +31,12 @@ class LoginController extends GetxController {
       );
 
       if (response.statusCode == 200) {
+        ColorLog.devLog(response.data!);
+
         _prefs.setAccessToken(response.data['data']['token']);
+        _prefs.setFullName(response.data['data']['user_data']['full_name']);
+        _prefs.setEmailAddress(response.data['data']['user_data']['email']);
+        _prefs.userId(response.data['data']['user_data']['user_id'].toString());
         _prefs.changeLoginState(true);
 
         Get.toNamed(RouteNames.home);

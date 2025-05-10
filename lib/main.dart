@@ -1,12 +1,10 @@
 import 'dart:async';
 import 'dart:ui' as ui;
-import 'dart:ui';
 import 'package:attend_master/utils/global_bindings.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
-import 'data/preference_controller.dart';
 import 'navigation/app_routes.dart';
 import 'navigation/route_names.dart';
 import 'screens/home/location_service_manager.dart';
@@ -39,7 +37,7 @@ class _MyAppState extends State<MyApp> {
   Widget build(BuildContext context) {
     return GetMaterialApp(
       debugShowCheckedModeBanner: false,
-      title: 'Attend Master',
+      title: 'HR Exon',
       theme: ThemeData(
           colorScheme: ColorScheme.fromSeed(seedColor: Colors.cyan),
           useMaterial3: false),

@@ -6,6 +6,7 @@ import 'package:attend_master/screens/calendar/calendar_screen.dart';
 import 'package:attend_master/screens/reports/reports_screen.dart';
 import 'package:attend_master/screens/settings/settings_screen.dart';
 
+import '../../data/preference_controller.dart';
 import '../../theme/app_theme.dart';
 import '../../utils/common_utils.dart';
 import 'home_controller.dart';
@@ -110,6 +111,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 }
 
 class _HomeContent extends StatelessWidget {
+  final PreferenceController _prefs = Get.find<PreferenceController>();
+
   @override
   Widget build(BuildContext context) {
     return SafeArea(
@@ -138,7 +141,7 @@ class _HomeContent extends StatelessWidget {
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Text(
-          'Attend Master',
+          'HR Exon',
           style: GoogleFonts.poppins(
             fontSize: 24,
             fontWeight: FontWeight.w600,
@@ -197,7 +200,7 @@ class _HomeContent extends StatelessWidget {
                     ),
                   ),
                   Text(
-                    'John Doe',
+                    '${_prefs.fullName}',
                     style: GoogleFonts.poppins(
                       fontSize: 20,
                       fontWeight: FontWeight.w600,

@@ -12,6 +12,8 @@ class PreferenceController extends GetxController {
 
   static const _userId = "USER_ID";
   static const _accessToken = "ACCESS_TOKEN";
+  static const _fullName = "FULL_NAME";
+  static const _emailAddress = "EMAIL_ADDRESS";
   static const _loginStatus = "LOGIN_STATUS";
   static const _settingsDataKey = "SETTINGS_DATA";
   static const _userSettingsDataKey = "USER_SETTINGS_DATA";
@@ -46,6 +48,18 @@ class PreferenceController extends GetxController {
   }
 
   String get accessTokens => _preferences!.getString(_accessToken) ?? "";
+
+  Future<bool> setFullName(String token) {
+    return _preferences!.setString(_fullName, token);
+  }
+
+  String get fullName => _preferences!.getString(_fullName) ?? "";
+
+  Future<bool> setEmailAddress(String token) {
+    return _preferences!.setString(_emailAddress, token);
+  }
+
+  String get emailAddress => _preferences!.getString(_emailAddress) ?? "";
 
   String get userID => _preferences!.getString(_userId) ?? "";
 
